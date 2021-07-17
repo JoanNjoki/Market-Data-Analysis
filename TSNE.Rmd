@@ -1,0 +1,164 @@
+---
+title: "Dimensionality Reduction"
+author: "Joan Mwangi"
+date: "7/16/2021"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problem Definition
+
+Reducing the dataset to low dimensional dataset using T-Distributed
+Stochastic Neighbor Embedding and draw insights from the analysis.
+
+# Data Sourcing
+
+```{r}
+#previewing the first 6 rows
+sales <- read.csv("C:/Users/jojos/Downloads/Supermarket_Dataset_1 - Sales Data (1).csv")
+head(sales)
+```
+
+# Check the Data
+
+```{r}
+#checking the structure of the dataset
+sapply(sales,class)
+```
+
+```{r}
+class(sales)
+```
+
+```{r}
+dim(sales)
+```
+
+This dataset has 1000 rows and 16 columns 
+#Perform Data Cleaning
+###Checking for null values
+
+```{r}
+colSums(is.na(sales))
+```
+
+There are no null values within the dataset 
+###Checking for duplicates
+
+```{r}
+duplicates <- sales[duplicated(sales),]
+duplicates
+```
+There are no duplicates
+
+#EDA
+##Univariate Analysis
+```{r}
+library(DataExplorer)
+plot_bar(sales)
+```
+Product line category: Fashion accessories has the highest count
+followed by food beverages
+
+Payment : Ewallet and Cash had the most count
+
+Branch A is slightly popular compared to branch B
+```{r}
+plot_histogram(sales)
+```
+
+Cogs, gross.income,tax and total are skewed to the left
+##Measures of central tendency
+```{r}
+
+library(psych)
+```
+
+```{r}
+describe(sales)
+```
+## Bivariate Analysis
+```{r}
+
+correlation <- cor(sales[,c(6:8,12,13,14,15,16)])
+library(corrplot)
+corrplot(correlation, use= "complete.obs")
+```
+```
+
+# Implement the Solution
+
+## Applying T-Distributed Stochastic Neighbor Embedding
+
+```{r}
+#curating the data for analysis
+lbl <- sales$Total
+head(lbl)
+
+```
+
+```{r}
+#plotting
+colors <- rainbow(length(unique(lbl)))#images for colors
+names(colors) = unique(lbl)
+```
+
+```{r}
+library(Rtsne)
+tsne <- Rtsne(sales,dim=2,perplexity=30,verbose=TRUE,max_iter=500)
+```
+
+```{r}
+#computing the execution time
+exeTimeTsne <- system.time(Rtsne(sales[,-16],dims=2,perplexity=30,verbose=TRUE,max_iter=500))
+```
+
+```{r}
+#plotting the graph and examining the graph
+plot(tsne$Y,t="n",main="tsne")
+text(tsne$Y,labels=sales$Total,col=colors[sales$Total])
+```
+
+## Comparing with PCA
+
+```{r}
+#selecting numerical columns
+sales_num <- sales[sapply(sales,is.numeric)]
+head(sales_num)
+```
+
+```{r}
+#creating a function for normality
+norm <- function(x){return((x-min(x))/max(x)-min(x))
+}
+#normalizing the whole dataset
+sales_num <- norm(sales_num[,-8])
+sales.pca <- prcomp(sales_num)
+summary(sales.pca)
+```
+
+From the summary, the PC1 takes 99.24% of the total variation
+
+```{r}
+#loading ggbiplot library for visualization
+#library(ggbiplot)
+library(ggplot2)
+library(scales)
+library(plyr)
+library(grid)
+library(devtools)
+library(ggbiplot)
+#install.packages("ggfortify")
+library(ggfortify)
+autoplot(sales.pca, data = sales, colour = 'Total', loadings = TRUE,loadings.label=TRUE,loadings.label.size=2)
+
+```
+
+#### PC2 is explained by unit price, despite pc 1 having the most explained variances, there are no variables that can be identified  to contribute to pc1
+TSNE performs better in clustering compared to pca, as pca identified only one principal components while tsne made a slight distinguish in their clusters.
