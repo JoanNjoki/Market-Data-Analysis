@@ -1,0 +1,128 @@
+---
+title: "Feature Selection"
+author: "Joan Mwangi"
+date: "7/17/2021"
+output:
+  html_document: default
+  pdf_document: default
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Problem Definition
+
+# Data Sourcing
+
+```{r}
+#previewing the first 6 rows
+sales <- read.csv("C:/Users/jojos/Downloads/Supermarket_Dataset_1 - Sales Data (2).csv")
+head(sales)
+```
+
+# Check the Data
+
+```{r}
+#checking the structure of the dataset
+sapply(sales,class)
+```
+
+```{r}
+class(sales)
+```
+
+Forecast belongs to class : data.frame
+
+```{r}
+dim(sales)
+```
+
+There are 1000 rows and 2 columns This dataset has 1000 rows and 16
+columns
+
+# Perform Data Cleaning 
+
+### Checking for null values
+
+```{r}
+colSums(is.na(sales))
+```
+
+There are no null values within the dataset \#\#\#Checking for
+duplicates
+
+```{r}
+duplicates <- sales[duplicated(sales),]
+duplicates
+```
+
+There are no duplicates
+
+# Perform Exploratory Data Analysis Univariate
+
+```{r}
+library(DataExplorer)
+plot_bar(sales)
+```
+
+```{r}
+plot_histogram(sales)
+```
+
+## Measures of central tendency 
+
+```{r}
+library(psych)
+describe(sales)
+```
+
+# Implement the Solution
+
+## Finding anomalies within the supermarket sales forecasting dataset
+
+```{r}
+#loading the libraries
+library(caret)
+library(corrplot)
+library(lattice)
+library(ggplot2)
+```
+
+```{r}
+#calculating the correlation matrix
+#identifying numerical columns
+suppressWarnings(
+        suppressMessages(if
+                         (!require(corrplot, quietly=TRUE))
+      install.packages("corrplot")))
+
+```
+
+```{r}
+sales_num <- sales[sapply(sales, is.numeric)]
+#installing corrplot
+library(corrplot)
+corr <- cor(sales_num)
+#finding columns that are highly correlated
+highcor <- findCorrelation(corr,cutoff=0.75)
+names(sales[,highcor])
+```
+
+Columns identified with correlation above Gender,Tax and Customer Type
+
+```{r}
+#removing the features with a correlation of above 0.75
+sales1 <- sales_num[-highcor]
+head(sales1)
+```
+
+```{r}
+#comparing correlogram with high correlation and  without
+par(mfrow = c(1, 2))
+corrplot(corr, order = "alphabet")
+corrplot(cor(sales1), order = "alphabet")
+```
+
+# Insights
+
+The highly correlated variables are: Gender, Tax and customer type
