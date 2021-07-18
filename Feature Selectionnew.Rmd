@@ -12,6 +12,8 @@ editor_options:
 
 # Problem Definition
 
+Identifying the features that contribute the most to the dataset
+
 # Data Sourcing
 
 ```{r}
@@ -125,4 +127,6 @@ corrplot(cor(sales1), order = "alphabet")
 
 # Insights
 
-The highly correlated variables are: Gender, Tax and customer type
+The highly correlated variables are: Gender, Tax and customer type, thus
+the features that contribute the most to the dataset are: Unit price,
+Quantity,gross margin percentage,gross income and rating
