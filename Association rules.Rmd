@@ -1,0 +1,202 @@
+---
+title: "Association Rules"
+author: "Joan Mwangi"
+date: "7/17/2021"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+---
+
+
+# Problem Definition
+
+Creating association rules that will identify relationships among variables in the dataset
+
+# Data Sourcing
+
+```{r}
+#loading the dataset
+suppressMessages(require("arules", quietly = TRUE))
+associate <- suppressMessages(read.transactions("http://bit.ly/SupermarketDatasetII"))
+
+```
+
+# Checking the Data
+
+```{r}
+#previewing the first 5 rows
+inspect(associate[1:5])
+```
+
+```{r}
+class(associate)
+```
+
+Associate dataset belongs to class : transactions
+
+```{r}
+dim(associate)
+```
+
+There are 7500 rows and 20 columns
+
+#### Checking for duplicates
+
+```{r}
+duplicates <- associate[duplicated(associate),]
+dim(duplicates)
+```
+
+The dataset has duplicates however they will not be dropped
+
+# EDA
+
+```{r}
+#distribution
+summary(associate)
+```
+
+-   There are 7500 transactions and 5725 product descriptions
+
+-   The top 3 frequent items are tea,wheat and mineral
+
+-   There are 1603 transactions for one item, 2007 for two items, 1382 for 3 items, with number of items reducing all the way to 1 transaction having 16 items
+
+    ## Frequency tables
+
+```{r}
+#frequency of some articles of transaction
+itemFrequency(associate[,8:10],type="absolute")
+round(itemFrequency(associate[,8:10],type="relative")*100,2)
+```
+
+```{r}
+#installing the packages
+suppressWarnings(
+        suppressMessages(if
+                         (!require("RColorBrewer", quietly=TRUE))
+                install.packages("RColorBrewer")))
+library(mclust)
+```
+```{r}
+itemFrequencyPlot(associate,topN=20,type="absolute",col=brewer.pal(8,'Pastel2'), main="Frequency Plot")
+```
+The frequency table visually shows that tea has highest frequency followed by wheat. If the company plans  to increase the sale of beef they could place it next mineral since a transaction exists that has a combination of beef and mineral
+
+# Implement the Solution
+
+```{r}
+#generating association rules
+association <- apriori(associate,parameter=list(supp=0.001,conf=0.8,maxlen=10))
+association
+```
+
+Using min_supp as 0.001 and confidence as 0.8, I have achieved 272 rules
+
+```{r}
+summary(association)
+```
+
+```{r}
+#inspecting the top 10 rules
+inspect(association[1:10])
+```
+
+-   From this table we can deduce: 100% of customer that bought cookies and low bought yogurt.
+
+-   Customers that also buy cookies and low have fat as their consequent transaction
+
+-   Those that have Extra in their cart end up having Dark
+
+-   Those having fries,escalope,pasta, and mushroom have cream as their consequent
+
+-   Finally those that have wheat as their consequent have either of the following antecedent transactions: {shrimp, whole, rice} or { cake, tomatoes, whole} or {flour,green}
+
+### Viewing it graphically
+
+```{r}
+library(arulesViz)
+sub10 <- head(association, n = 10, by = "confidence")
+plot(sub10, method = "graph",  engine = "htmlwidget")
+```
+
+```{r}
+#getting stronger association rules
+short.association <- apriori(associate,parameter=list(supp=0.001,conf=0.8,maxlen=3))
+short.association
+```
+
+252 rules have been identified as rules with almost 3 items in a transaction
+
+## Finding anomalies within the supermarket sales forecasting dataset
+
+```{r}
+#removing rules that are a subset of larger rules
+sub <- which(colSums(is.subset(association,association))>1)
+length(sub)
+```
+
+```{r}
+#removing 164 rules that have been identified as redundant
+subset.ass <- association[-sub]
+length(subset.ass)
+```
+
+#### Identifying transactions associated with the three most popular items in the item list
+
+```{r}
+meat <- subset(association,subset=lhs %pin% "meat")
+meat <- sort(meat,by="confidence",decreasing=TRUE)
+#Inspecting top 10 
+meat
+```
+
+There are 0 rules associated with meat
+
+```{r}
+wheat <- subset(association,subset=lhs%pin% "wheat")
+wheat <- sort(wheat,by="confidence",decreasing=TRUE)
+inspect(wheat[1:8])
+```
+
+100% of customers who buy wheat and Parmesan buy cheese.
+Those that have whole, wheat and yogurt go for fat  as their next transaction.Same case applies to those buying water,whole, wheat and yogurt.
+Those that buy wheat, whole and yogurt buy fat. 
+Transactions with {wheat,yorgurt,whole} are similar to transaction that has {wheat,yorgurt} all buy fat.
+
+```{r}
+mineral <- subset(association,subset=lhs%pin% "mineral")
+mineral <- sort(mineral,by="confidence",decreasing=TRUE)
+inspect(mineral[1:15])
+```
+
+-   Majority of the top 10 transactions that have mineral as one of their items end up buying wheat, followed by fat then yogurt
+```{r}
+cake <- subset(association,subset=lhs%pin% "cake")
+cake <- sort(cake,by="confidence",decreasing=TRUE)
+inspect(cake)
+```
+16 transactions having cake and green buy tea.
+10 transactions that have rice and cake in the item list buy wheat
+```{r}
+#installing arules visualize
+install.packages("arulesViz")
+library(arulesViz)
+```
+
+```{r}
+#visualizing the rules with confidence greater than 0.5
+sub <- association[quality(association)$confidence>0.5]
+plot(sub)
+```
+
+From the scatter plot,the rules are moderately independent of support.There is no correlation between confidence and support.The lift with a value of around 600, has a confidence of 0.90 and support 0. Although customers within that transaction have a higher likelihood in buying items within the antecedent transaction,items within their consequent transaction are not popular among customers.Few of the lift values that can be identified as greater than 1, which means there is a positive correlation between consequent and antecedent transactions.
+
+# Conclusion 
+
+The findings show that tea, wheat and metal are items that appear most in the transactions.Cake, beef and mineral appear the least. Majority of the antecedent transactions have a higher likelihood to carry out consequent transactions. 
+# Recommendation
+The marketing could place tea,wheat and mineral close to cake,{beef,mineral} to increase the sales of items listed at the latter.
