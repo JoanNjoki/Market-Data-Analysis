@@ -1,0 +1,121 @@
+---
+title: "Anomaly Detection"
+author: "Joan Mwangi"
+date: "7/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problem Statement 
+
+Identifying anomalies within the dataset
+
+```{r}
+#loading the dataset
+forecast <- read.csv("http://bit.ly/CarreFourSalesDataset")
+head(forecast)
+```
+
+\#Perform Data Cleaning \#\#\#Checking for null values
+
+```{r}
+colSums(is.na(forecast))
+```
+
+There are no null values within the dataset \#\#\#Checking for duplicates
+
+```{r}
+duplicates <- forecast[duplicated(forecast),]
+duplicates
+```
+
+# EDA
+
+```{r}
+library(psych)
+describe(forecast)
+```
+
+Sales mean is 322.97, with a minimum value of 10.68 and maximum of 1042.65
+
+```{r}
+library(DataExplorer)
+plot_histogram(forecast)
+```
+
+Sales column is skewed to the left with majority of the values between 0 and 250
+
+# Implementing the solution
+
+```{r}
+anom_sum<-aggregate(forecast$Sales,by=list(Date=forecast$Date),FUN=sum)
+head(anom_sum)
+```
+
+```{r}
+#getting a dataframe of the frequency table of Date
+table_dt<-data.frame(table(forecast$Date))
+head(table_dt)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+# combining both dataframes
+df<-merge(anom_sum,table_dt,by.x= "Date", by.y="Var1")
+#renaming the columns
+names(df)<-c("Date","Sum.Tot","Count")
+#renaming the columns
+head(df)
+```
+
+```{r}
+library(lubridate)
+```
+
+```{r}
+#Changing date column to Date format
+df$Date<-mdy(df$Date)
+sapply(df,class)
+```
+
+```{r}
+library(tidyverse)
+df1 <- df %>% select(Date,Count)
+df1
+
+```
+
+```{r}
+# Convert df to a tibble
+df2 <- as_tibble(df1)
+class(df2)
+```
+
+```{r}
+library(anomalize)
+library(tidyverse)
+anomal <- df2 %>%
+    time_decompose(Count, merge = TRUE) %>%
+    anomalize(remainder) %>%
+    time_recompose()
+anomal %>% glimpse()
+```
+
+```{r}
+anomal %>% plot_anomalies(ncol = 3, alpha_dots = 0.5)
+```
+
+```{r}
+anomal %>% 
+  time_decompose(Count) %>%
+  anomalize(remainder) %>%
+  time_recompose() %>%
+  filter(anomaly==TRUE)
+```
+There were no anomalies
